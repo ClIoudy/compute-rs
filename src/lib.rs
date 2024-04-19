@@ -2,4 +2,4 @@
 pub mod building;
 
 #[cfg(feature = "executor")]
-pub mod executor;
+pub mod gpu;

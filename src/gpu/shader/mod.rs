@@ -23,15 +23,14 @@ impl<'a> Shader<'a> {
         wgpu::BindGroupLayoutEntry { 
             binding: buffer.binding, 
             visibility: wgpu::ShaderStages::COMPUTE, 
-            ty: (), 
+            ty: wgpu::BindingType::Buffer { 
+                ty: wgpu::BufferBindingType::Storage { 
+                    read_only: buffer.is_read_only 
+                }, 
+                has_dynamic_offset: buffer.has_dynamic_offset, 
+                min_binding_size: std::num::NonZeroU64::new(1), 
+            }, 
             count: None
-        }
-    }
-
-    fn bind_entry_of_buffer(buffer: &BufferRaw) -> wgpu::BindGroupEntry {
-        wgpu::BindGroupEntry { 
-            binding: buffer.binding, 
-            resource: () 
         }
     }
 
@@ -41,7 +40,19 @@ impl<'a> Shader<'a> {
         let bind_group_entries: Vec<wgpu::BindGroupEntry> = vec![];
 
         for buffer in &self.buffers {
+            let wgpu_buffer = self.device.create_buffer_init(
+                &wgpu::util::BufferInitDescriptor {
+                    label: None,
+                    contents: &buffer.data,
+                    usage: wgpu::BufferUsages::COPY_SRC
+                        | wgpu::BufferUsages::STORAGE
+                }
+            );
 
+            let bind_entry = wgpu::BindGroupEntry {
+                binding: buffer.binding,
+                resource: wgpu_buffer.as_entire_binding(),
+            };
         }
 
         let bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -86,6 +97,7 @@ impl<'a> Shader<'a> {
         cpass.set_bind_group(0, &bind_group, &[]);
         cpass.set_pipeline(&compute_pipeline);
         cpass.dispatch_workgroups(x, y, z);
+        
 
 
     }

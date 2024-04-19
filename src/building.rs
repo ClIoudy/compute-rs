@@ -1,10 +1,8 @@
 use spirv_builder::SpirvBuilder;
 
-pub fn build_shader(path: &str) -> Option<spirv_builder::SpirvBuilderError> {
-    let shader = SpirvBuilder::new(path, "spirv-unknown-vulkan1.1")
-    .build().expect("Error compiling kernel");
-    // return shader.err()
-    None
+pub fn build_shader(path: &str) -> Result<spirv_builder::CompileResult, spirv_builder::SpirvBuilderError> {
+    SpirvBuilder::new(path, "spirv-unknown-vulkan1.1")
+    .build()
 }
 
 pub fn build_all(directory: &str) {
