@@ -1,14 +1,17 @@
-mod buffer_raw;
-use buffer_raw::BufferRaw;
+use std::marker::PhantomData;
 
-pub struct Buffer<'a, T> {
-    buffer: BufferRaw,
+mod buffer_raw;
+pub use buffer_raw::BufferRaw;
+
+pub struct Buffer<'a, T: Sized> {
+    buffer: BufferRaw<'a>,
+    stored_type: PhantomData<T>
 }
 
-impl<T: Sized> Buffer<'_, T> {
+impl<'a, T: Sized> Buffer<'a, T> {
 
     pub fn convert_back(&mut self) -> &T {
-        let ptr = self.data_raw.as_ptr();
+        let ptr = self.buffer.data.as_ptr();
         let a = ptr as *mut T;
         unsafe {
             let ref res = *a;
@@ -16,18 +19,14 @@ impl<T: Sized> Buffer<'_, T> {
         }
     }
 
-    pub fn from(binding: u32, data: T) -> Self {
+    pub fn from(binding: u32, data: &'static T) -> Self {
         let buffer = BufferRaw::from_data(binding, any_as_u8_slice::<T>(&data));
-         
+        
         Self {
             buffer,
+            stored_type: PhantomData     
         }
     }
-
-    
-
-
-
 }
 
 
