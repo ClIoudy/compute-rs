@@ -4,14 +4,14 @@ mod buffer_raw;
 pub use buffer_raw::BufferRaw;
 
 pub struct Buffer<'a, T: Sized> {
-    buffer: BufferRaw<'a>,
+    pub raw: BufferRaw<'a>,
     stored_type: PhantomData<T>
 }
 
-impl<'a, T: Sized> Buffer<'a, T> {
+impl<'a, T: Sized + 'static> Buffer<'a, T> {
 
     pub fn convert_back(&mut self) -> &T {
-        let ptr = self.buffer.data.as_ptr();
+        let ptr = self.raw.data.as_ptr();
         let a = ptr as *mut T;
         unsafe {
             let ref res = *a;
@@ -19,21 +19,22 @@ impl<'a, T: Sized> Buffer<'a, T> {
         }
     }
 
-    pub fn from(binding: u32, data: &'static T) -> Self {
-        let buffer = BufferRaw::from_data(binding, any_as_u8_slice::<T>(&data));
+    pub fn from(binding: u32, data: T) -> Self {
+        let raw_data = any_as_u8_slice::<T>(data);
+        let buffer = BufferRaw::from_data(binding, raw_data);
         
         Self {
-            buffer,
+            raw: buffer,
             stored_type: PhantomData     
         }
     }
 }
 
 
-pub fn any_as_u8_slice<T: Sized>(any: &T) -> &[u8] {
-    unsafe{ 
+pub fn any_as_u8_slice<T: Sized>(any: T) -> &'static [u8] {
+    unsafe {
         core::slice::from_raw_parts(
-            (any as *const T) as *const u8,
+            (&any as *const T) as *const u8,
             ::core::mem::size_of::<T>(),
         )
     }

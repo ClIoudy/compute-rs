@@ -1,7 +1,9 @@
 #![allow(warnings)]
 
-mod buffer;
-use buffer::{Buffer, BufferRaw};
+pub mod buffers;
+use std::ops::DerefMut;
+
+use buffers::{Buffer, BufferRaw};
 use wgpu::util::DeviceExt;
 
 
@@ -28,7 +30,7 @@ impl<'a> Shader<'a> {
                     read_only: buffer.is_read_only 
                 }, 
                 has_dynamic_offset: buffer.has_dynamic_offset, 
-                min_binding_size: std::num::NonZeroU64::new(1), 
+                min_binding_size: std::num::NonZeroU64::new(buffer.data.len() as u64), 
             }, 
             count: None
         }
@@ -36,8 +38,9 @@ impl<'a> Shader<'a> {
 
     pub fn dispatch(&mut self, entry_point: &str, x: u32, y: u32, z: u32) {
         
-        let bind_group_layout_entries: Vec<wgpu::BindGroupLayoutEntry> = vec![];
-        let bind_group_entries: Vec<wgpu::BindGroupEntry> = vec![];
+        let mut wgpu_buffers = vec![];
+        let mut bind_group_layout_entries: Vec<wgpu::BindGroupLayoutEntry> = vec![];
+        let mut bind_group_entries: Vec<wgpu::BindGroupEntry> = vec![];
 
         for buffer in &self.buffers {
             let wgpu_buffer = self.device.create_buffer_init(
@@ -47,28 +50,37 @@ impl<'a> Shader<'a> {
                     usage: wgpu::BufferUsages::COPY_SRC
                         | wgpu::BufferUsages::STORAGE
                 }
-            );
+            );            
 
-            let bind_entry = wgpu::BindGroupEntry {
-                binding: buffer.binding,
-                resource: wgpu_buffer.as_entire_binding(),
-            };
+            let layout_entry = Self::bind_layout_entry_of_buffer(buffer);
+
+            bind_group_layout_entries.push(layout_entry);
+            wgpu_buffers.push((wgpu_buffer, buffer.binding));
         }
+        
+        
 
         let bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: None,
-            // entires:  bind_group_layout_entries.as_slice()
-            entries: &[
-            ],
+            entries: bind_group_layout_entries.as_slice()
+            // entries: &[],
         });
         
+        for b in &wgpu_buffers {
+            let bind_entry = wgpu::BindGroupEntry {
+                binding: b.1,
+                resource: b.0.as_entire_binding(),
+            };
 
+            bind_group_entries.push(bind_entry);
+        }
+        
         let bind_group = self.device.create_bind_group(
         &wgpu::BindGroupDescriptor { 
             label: None, 
             layout: &bind_group_layout, 
-            // entires:  bind_group_entries.as_slice()
-            entries: &[] 
+            entries: bind_group_entries.as_slice()
+            // entries: &[] 
         }
         );
 
@@ -80,28 +92,32 @@ impl<'a> Shader<'a> {
             &wgpu::ComputePipelineDescriptor { label: None, layout: Some(&compute_pipeline_layout), module: &self.shader_module, entry_point }
         );
 
-
-        let mut encoder = self.device.create_command_encoder(
-            &wgpu::CommandEncoderDescriptor { label: None}
-        );
         let mut encoder = self.device.create_command_encoder(
             &wgpu::CommandEncoderDescriptor { label: None }
         );
 
-        let mut cpass = encoder.begin_compute_pass(
-            &wgpu::ComputePassDescriptor { label: None, timestamp_writes: None }
-        );
+        {
+            let mut cpass = encoder.begin_compute_pass(
+                &wgpu::ComputePassDescriptor { label: None, timestamp_writes: None }
+            );
 
+            cpass.set_bind_group(0, &bind_group, &[]);
+            cpass.set_pipeline(&compute_pipeline);
+            cpass.dispatch_workgroups(x, y, z);
+        }
 
-
-        cpass.set_bind_group(0, &bind_group, &[]);
-        cpass.set_pipeline(&compute_pipeline);
-        cpass.dispatch_workgroups(x, y, z);
-        
-
+        for i in 0..self.buffers.len() {
+            if (self.buffers[i].is_read_only) {
+                continue;
+            }
+            self.buffers[i].update(&wgpu_buffers[i].0, &mut encoder, &self.device);
+        }
 
     }
 
+    pub fn add_buffer<T>(&mut self, buffer: &'a Buffer<T>) {
+        self.buffers.push(buffer.raw);
+    }
 
 
     // pub fn add_buffer<T: Sized>(&mut self, buffer: &mut Buffer<T>) {

@@ -1,5 +1,6 @@
 #![allow(warnings)]
-mod shader;
+pub mod shader;
+pub use shader::buffers::{Buffer};
 pub use futures::executor::block_on;
 
 use self::shader::Shader;
