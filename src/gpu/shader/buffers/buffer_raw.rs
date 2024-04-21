@@ -34,16 +34,7 @@ impl BufferRaw<'_> {
         self.has_dynamic_offset = set;
     }
 
-    pub fn update(&mut self, buffer: &wgpu::Buffer, encoder: &mut wgpu::CommandEncoder, device: &wgpu::Device) {
-        let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: None,
-            size: self.data.len() as wgpu::BufferAddress,
-            // Can be read to the CPU, and can be copied from the shader's storage buffer
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        
-        encoder.copy_buffer_to_buffer(buffer, 0, &readback_buffer, 0, self.data.len() as u64);
+    pub fn update(&mut self, buffer: &wgpu::Buffer, readback_buffer: &wgpu::Buffer, device: &wgpu::Device) {
 
         let slice = readback_buffer.slice(..);
 
@@ -57,7 +48,7 @@ impl BufferRaw<'_> {
         
         let a = block_on(reciever).expect("comm failed").expect("buffer read failed");
         let buffer_res: &[u8] = &slice.get_mapped_range();
-        println!("{:#?}", buffer_res); 
+        println!("{:#?}", buffer_res);
     }
 
 }

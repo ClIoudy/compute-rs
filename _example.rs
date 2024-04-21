@@ -30,26 +30,26 @@ pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>
 
     // Load shader
     let module = device.create_shader_module(&shader_binary);
-    // let src = input
-    //     .iter()
-    //     .map(|x| u32::to_ne_bytes(*x)) // Not sure which endianness is correct to use here
-    //     .flat_map(core::array::IntoIter::new)
-    //     .collect::<Vec<_>>();
+    let src = input
+        .iter()
+        .map(|x| u32::to_ne_bytes(*x)) // Not sure which endianness is correct to use here
+        .flat_map(core::array::IntoIter::new)
+        .collect::<Vec<_>>();
 
     // Create dummy bind group layout since some GPUs don't support empty bind layout group
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: None,
         entries: &[
-            // wgpu::BindGroupLayoutEntry {
-            //     binding: 0,
-            //     count: None,
-            //     visibility: wgpu::ShaderStage::COMPUTE,
-            //     ty: wgpu::BindingType::Buffer {
-            //         has_dynamic_offset: false,
-            //         min_binding_size: Some(NonZeroU64::new(1).unwrap()),
-            //         ty: wgpu::BufferBindingType::Storage { read_only: false },
-            //     },
-            // },
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                count: None,
+                visibility: wgpu::ShaderStage::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    has_dynamic_offset: false,
+                    min_binding_size: Some(NonZeroU64::new(1).unwrap()),
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                },
+            },
         ],
     });
 
@@ -69,32 +69,32 @@ pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>
     });
 
     // Create buffer for GPU -> CPU
-    // let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-    //     label: None,
-    //     size: src.len() as wgpu::BufferAddress,
-    //     // Can be read to the CPU, and can be copied from the shader's storage buffer
-    //     usage: wgpu::BufferUsage::MAP_READ | wgpu::BufferUsage::COPY_DST,
-    //     mapped_at_creation: false,
-    // });
+    let readback_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: None,
+        size: src.len() as wgpu::BufferAddress,
+        // Can be read to the CPU, and can be copied from the shader's storage buffer
+        usage: wgpu::BufferUsage::MAP_READ | wgpu::BufferUsage::COPY_DST,
+        mapped_at_creation: false,
+    });
 
-    // // Create buffer for CPU -> GPU and storage
-    // let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-    //     label: None,
-    //     contents: &src,
-    //     usage: wgpu::BufferUsage::STORAGE
-    //         | wgpu::BufferUsage::COPY_DST
-    //         | wgpu::BufferUsage::COPY_SRC,
-    // });
+    // Create buffer for CPU -> GPU and storage
+    let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: None,
+        contents: &src,
+        usage: wgpu::BufferUsage::STORAGE
+            | wgpu::BufferUsage::COPY_DST
+            | wgpu::BufferUsage::COPY_SRC,
+    });
 
     // Create bind group for GPU buffer
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: None,
         layout: &bind_group_layout,
         entries: &[
-            // wgpu::BindGroupEntry {
-            // binding: 0,
-            // resource: storage_buffer.as_entire_binding(),
-        // }
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: storage_buffer.as_entire_binding(),
+            }
         ],
     });
 
@@ -110,31 +110,31 @@ pub async fn execute_kernel(shader_binary: wgpu::ShaderModuleDescriptor<'static>
     }
 
     // CPU readback
-    // encoder.copy_buffer_to_buffer(
-    //     &storage_buffer, 0,
-    //     &readback_buffer, 0,
-    //     src.len() as wgpu::BufferAddress,
-    // );
+    encoder.copy_buffer_to_buffer(
+        &storage_buffer, 0,
+        &readback_buffer, 0,
+        src.len() as wgpu::BufferAddress,
+    );
 
-    // // Wait for GPU to finish
-    // queue.submit(Some(encoder.finish()));
-    // let buffer_slice = readback_buffer.slice(..);
-    // let buffer_future = buffer_slice.map_async(wgpu::MapMode::Read);
-    // device.poll(wgpu::Maintain::Wait);
+    // Wait for GPU to finish
+    queue.submit(Some(encoder.finish()));
+    let buffer_slice = readback_buffer.slice(..);
+    let buffer_future = buffer_slice.map_async(wgpu::MapMode::Read);
+    device.poll(wgpu::Maintain::Wait);
 
-    // // Fetch result as u32 vec
-    // if let Ok(_) = buffer_future.await {
-    //     let data = buffer_slice.get_mapped_range();
-    //     let result = data
-    //         .chunks_exact(4)
-    //         .map(|b| u32::from_ne_bytes(b.try_into().unwrap()))
-    //         .collect::<Vec<_>>();
-    //     drop(data);
-    //     readback_buffer.unmap();
-    //     Some(result)
-    // } else {
-    //     None
-    // }
+    // Fetch result as u32 vec
+    if let Ok(_) = buffer_future.await {
+        let data = buffer_slice.get_mapped_range();
+        let result = data
+            .chunks_exact(4)
+            .map(|b| u32::from_ne_bytes(b.try_into().unwrap()))
+            .collect::<Vec<_>>();
+        drop(data);
+        readback_buffer.unmap();
+        Some(result)
+    } else {
+        None
+    }
 }
 
 const KERNEL: &[u8] = include_bytes!(env!("compute.spv"));

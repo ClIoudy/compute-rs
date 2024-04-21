@@ -14,11 +14,12 @@ pub struct Shader<'a> {
     // bind_group_layout_entries: Vec<wgpu::BindGroupLayoutEntry>,
     // bind_group_entries: Vec<(u32, wgpu::Buffer)>,
     buffers: Vec<BufferRaw<'a>>,
+    queue: &'a wgpu::Queue
 }
 
 impl<'a> Shader<'a> {
-    pub fn new(device: &'a wgpu::Device, shader_module: wgpu::ShaderModule) -> Self {
-        Self { device, shader_module, buffers: vec![] }
+    pub fn new(device: &'a wgpu::Device, shader_module: wgpu::ShaderModule, queue: &'a wgpu::Queue) -> Self {
+        Self { device, shader_module, buffers: vec![], queue }
     }
 
     fn bind_layout_entry_of_buffer(buffer: &BufferRaw) -> wgpu::BindGroupLayoutEntry {
@@ -66,6 +67,7 @@ impl<'a> Shader<'a> {
             // entries: &[],
         });
         
+
         for b in &wgpu_buffers {
             let bind_entry = wgpu::BindGroupEntry {
                 binding: b.1,
@@ -78,7 +80,7 @@ impl<'a> Shader<'a> {
         let bind_group = self.device.create_bind_group(
         &wgpu::BindGroupDescriptor { 
             label: None, 
-            layout: &bind_group_layout, 
+            layout: &bind_group_layout,
             entries: bind_group_entries.as_slice()
             // entries: &[] 
         }
@@ -106,11 +108,28 @@ impl<'a> Shader<'a> {
             cpass.dispatch_workgroups(x, y, z);
         }
 
+        let mut readback_buffers = vec![];
+
+        for buffer in &wgpu_buffers {
+            let readback_buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: None,
+                size: buffer.0.size(),
+                // Can be read to the CPU, and can be copied from the shader's storage buffer
+                usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+
+            encoder.copy_buffer_to_buffer(&buffer.0, 0, &readback_buffer, 0, buffer.0.size());
+            readback_buffers.push(readback_buffer);
+        }
+
+        self.queue.submit(Some(encoder.finish()));
+
         for i in 0..self.buffers.len() {
             if (self.buffers[i].is_read_only) {
                 continue;
             }
-            self.buffers[i].update(&wgpu_buffers[i].0, &mut encoder, &self.device);
+            self.buffers[i].update(&wgpu_buffers[i].0, &readback_buffers[i], &self.device);
         }
 
     }
