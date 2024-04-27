@@ -13,7 +13,7 @@ pub struct Shader<'a> {
     shader_module: wgpu::ShaderModule,
     // bind_group_layout_entries: Vec<wgpu::BindGroupLayoutEntry>,
     // bind_group_entries: Vec<(u32, wgpu::Buffer)>,
-    buffers: Vec<BufferRaw<'a>>,
+    buffers: Vec<&'a mut BufferRaw>,
     queue: &'a wgpu::Queue
 }
 
@@ -47,7 +47,7 @@ impl<'a> Shader<'a> {
             let wgpu_buffer = self.device.create_buffer_init(
                 &wgpu::util::BufferInitDescriptor {
                     label: None,
-                    contents: &buffer.data,
+                    contents: buffer.data.as_slice(),
                     usage: wgpu::BufferUsages::COPY_SRC
                         | wgpu::BufferUsages::STORAGE
                 }
@@ -79,11 +79,11 @@ impl<'a> Shader<'a> {
         
         let bind_group = self.device.create_bind_group(
         &wgpu::BindGroupDescriptor { 
-            label: None, 
-            layout: &bind_group_layout,
-            entries: bind_group_entries.as_slice()
-            // entries: &[] 
-        }
+                label: None, 
+                layout: &bind_group_layout,
+                entries: bind_group_entries.as_slice()
+                // entries: &[] 
+            }
         );
 
         let compute_pipeline_layout = self.device.create_pipeline_layout(
@@ -134,8 +134,9 @@ impl<'a> Shader<'a> {
 
     }
 
-    pub fn add_buffer<T>(&mut self, buffer: &'a Buffer<T>) {
-        self.buffers.push(buffer.raw);
+    // this definitely needs work
+    pub fn add_buffer<T>(&mut self, buffer: &'a mut Buffer<T>) {
+        self.buffers.push(&mut buffer.raw);
     }
 
 
