@@ -26,7 +26,7 @@ impl<'a> Shader<'a> {
             bind_group_entries: vec![],
             bind_group: None,
             pipline_layout: None,
-            buffers: vec![]
+            buffers: vec![],
         }
     }
 
@@ -85,9 +85,6 @@ impl<'a> Shader<'a> {
                 push_constant_ranges: &[],
             }
         );
-
-        
-        
         
         let bind_group = self.device.create_bind_group(
             &wgpu::BindGroupDescriptor { 
@@ -95,8 +92,6 @@ impl<'a> Shader<'a> {
                 layout: &bind_group_layout, 
                 entries: bind_group_entries.as_slice() }
         );
-        
-
         
         let compute_pipeline = self.device.create_compute_pipeline(
             &wgpu::ComputePipelineDescriptor { 
@@ -123,12 +118,6 @@ impl<'a> Shader<'a> {
             staging_buffers[i].size(),
             );
         }
-
-        // encoder.copy_buffer_to_buffer(
-        //     &staging_buffer, 0,
-        //     &readback_buffer, 0,
-        //     staging_buffer.size(),
-        // );
 
         self.queue.submit(Some(encoder.finish()));
         // self.device.poll(wgpu::Maintain::Wait);
@@ -166,10 +155,6 @@ impl<'a> Shader<'a> {
                 usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
             }
         );
-
-        
-
-
 
         self.buffers.push((buffer, wgpu_buffer));
     }
