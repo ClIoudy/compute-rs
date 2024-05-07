@@ -1,3 +1,12 @@
+- should shaders own buffers?
+- as in shader.create_buffer() -> &mut Buffer and the shader keeps the real buffer object
+- pro: easy handling ?
+- con: what if one buffer used in multiple shaders sequentially  
+
+
+
+
+-------------------------------------------------------------
 - buffers contain wgpu buffers?
 - dispatch should only have minimum amount of operations as necessary
     - move pipelinelayout to start of creation?

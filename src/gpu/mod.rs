@@ -1,13 +1,11 @@
-#![allow(warnings)]
-pub mod shader;
-pub use shader::buffers::{Buffer};
 pub use futures::executor::block_on;
-
-use self::shader::Shader;
+pub mod shader;
+use shader::Shader;
+pub use wgpu;
 
 pub struct Gpu {
-    device: wgpu::Device,
-    queue: wgpu::Queue,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
 }
 
 impl Gpu {
@@ -51,7 +49,7 @@ impl Gpu {
             )
         };
 
-        Shader::new(&self.device, module, &self.queue)
+        Shader::new(&self.device, &self.queue, module)
     }
 
 }
