@@ -12,7 +12,7 @@ pub struct Shader<'a> {
     bind_group_entries: Vec<wgpu::BindGroupEntry<'a>>,
     bind_group: Option<wgpu::BindGroup>,
     pipline_layout: Option<wgpu::PipelineLayout>,
-    buffers: Vec<(&'a mut Buffer, wgpu::Buffer)>,
+    buffers: Vec<(&'a mut BufferRaw, wgpu::Buffer)>,
 }
 
 impl<'a> Shader<'a> {
@@ -148,7 +148,8 @@ impl<'a> Shader<'a> {
     }
 
 
-    pub fn add_buffer(&mut self, buffer: &'a mut Buffer) {      
+    pub fn add_buffer<T>(&mut self, buffer: &'a mut Buffer<T>) {  
+        let buffer = &mut buffer.buffer_raw;     
         let wgpu_buffer = self.device.create_buffer(
             &wgpu::BufferDescriptor {
                 label: None,

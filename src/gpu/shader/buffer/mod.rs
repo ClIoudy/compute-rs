@@ -1,35 +1,36 @@
-use std::{mem::transmute, ptr};
-
-pub struct Buffer {
-    pub binding: u32,
-    pub data: Vec<u8>,
-    pub wgpu_buffer: Option<wgpu::Buffer>,
+use std::{marker::PhantomData, mem::transmute, ptr};
+mod buffer_raw;
+pub use buffer_raw::BufferRaw;
+pub struct Buffer<T> {
+    pub(crate) buffer_raw: BufferRaw,
+    phantom_type: PhantomData<T>,
 }
 
-impl Buffer {
+impl<T> Buffer<T> {
     pub fn new(binding: u32) -> Self {
         Self {
-            binding,
-            data: vec![],
-            wgpu_buffer: None,
+            buffer_raw: BufferRaw::new(binding),
+            phantom_type: PhantomData
         }
     }
 
-    pub fn from<T: Sized>(binding: u32, data: &T) -> Self {
+    pub fn data_raw(&self) -> &Vec<u8> {
+        &self.buffer_raw.data
+    }
+    pub fn from(binding: u32, data: &T) -> Self {
         Self {
-            binding,
-            data: any_as_u8(data).to_vec(),
-            wgpu_buffer: None
+            buffer_raw: BufferRaw::from(binding, data),
+            phantom_type: PhantomData
         }
     }
 
-    pub fn data<T>(&self) -> &[T] {
-        u8_as_slice_of(&self.data)
+    pub fn data(&self) -> &[T] {
+        u8_as_slice_of(&self.buffer_raw.data)
     }
 
 }
 
-pub fn any_as_u8<T>(data: &T) -> &'static [u8]{
+pub fn any_as_u8<T>(data: &T) -> &[u8]{
     unsafe {
         std::slice::from_raw_parts((data as *const T) as *const u8, std::mem::size_of_val(data))
     }
