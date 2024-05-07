@@ -1,3 +1,18 @@
+- BufferRaw for buffer with phantomdata
+- add attributes like read_only to bufferaw attributes
+- clean up shader attributes/try to enhance performance by implementing bind_group attributes etc
+- should shaders own buffers?
+    - as in shader.create_buffer() -> &mut Buffer and the shader keeps the real buffer object
+    - no mutable/immutable borrow issue
+
+
+
+
+
+
+
+
+--------------------
 - should shaders own buffers?
 - as in shader.create_buffer() -> &mut Buffer and the shader keeps the real buffer object
 - pro: easy handling ?

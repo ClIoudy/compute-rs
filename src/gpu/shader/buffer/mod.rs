@@ -23,9 +23,9 @@ impl Buffer {
         }
     }
 
-    // pub fn data<T>(&self) -> T {
-    //     u8_as_any(&self.data)
-    // }
+    pub fn data<T>(&self) -> &[T] {
+        u8_as_slice_of(&self.data)
+    }
 
 }
 
