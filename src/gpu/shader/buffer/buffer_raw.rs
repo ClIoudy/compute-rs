@@ -6,15 +6,15 @@ pub struct BufferRaw {
 }
 
 impl BufferRaw {
-    pub fn new(binding: u32) -> Self {
+    pub fn new(binding: u32, data: &Vec<u8>, wgpu_buffer: wgpu::Buffer) -> Self {
         Self {
             binding,
-            data: vec![],
-            wgpu_buffer: None,
+            data: data.to_vec(),
+            wgpu_buffer: Some(wgpu_buffer),
         }
     }
 
-    pub fn from<T: Sized>(binding: u32, data: &T) -> Self {
+    pub fn from<T>(binding: u32, data: &T) -> Self {
         Self {
             binding,
             data: any_as_u8(data).to_vec(),

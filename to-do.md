@@ -1,1 +1,1 @@
-- dont let Shader take &mut Buffers or drop them after every dispatch
+- shaderbuilder struct for add buffers etc then freeze bindgroup layout etc?
