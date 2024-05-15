@@ -17,7 +17,7 @@ pub struct Kernel<'a> {
 }
 
 impl<'a> Kernel<'a> {
-    pub fn new(device: &'a wgpu::Device, queue: &'a wgpu::Queue, module: wgpu::ShaderModule, entry_point: &'a str) -> Self {
+    pub(crate) fn new(device: &'a wgpu::Device, queue: &'a wgpu::Queue, module: wgpu::ShaderModule, entry_point: &'a str) -> Self {
         Self {
             device,
             queue,
@@ -30,6 +30,8 @@ impl<'a> Kernel<'a> {
         }
     }
 
+    // Dispatches a kernel.
+    // Before every dispatch the buffers have to be added again  
     pub fn dispatch(&mut self, x: u32, y: u32, z: u32) {        
        
         let mut bindgroup_layout_entries = vec![];
@@ -161,10 +163,12 @@ impl<'a> Kernel<'a> {
 
         self.buffers = vec![];
         self.staging_buffers = vec![];
-        
-        
+         
     }
 
+    // Adds a buffer to a kernel. 
+    // Only 1 object can mutate the buffer at a time. 
+    // Once a buffer has been added to a kernel, any other mutates will be removed again after that kernel has been dispatched
     pub fn add_buffer<'b, T>(&mut self, buffer: &'b mut Buffer<T>) {
         buffer.buffer_raw.is_borrowed = true;
         
@@ -182,5 +186,6 @@ impl<'a> Kernel<'a> {
         let buffer = unsafe { &mut *(buffer as *mut Buffer<T>) };
         self.buffers.push(&mut buffer.buffer_raw);
     }
+
 }
 

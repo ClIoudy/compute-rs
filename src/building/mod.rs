@@ -1,6 +1,6 @@
 const COMPILE_TARGET: &str = "spirv-unknown-vulkan1.1";
 
-#[cfg(feature = "building")]
+#[cfg(feature = "runtime_building")]
 pub mod runtime;
 
 pub fn build_shader<S: AsRef<std::path::Path> + ?Sized>(path: &S) -> Result<spirv_builder::CompileResult, spirv_builder::SpirvBuilderError> {
@@ -10,7 +10,6 @@ pub fn build_shader<S: AsRef<std::path::Path> + ?Sized>(path: &S) -> Result<spir
 
 pub fn build_all<S: AsRef<std::path::Path> + ?Sized>(directory: &str) {
     for shader in std::fs::read_dir(directory)
-
     .expect(&format!("Error finding directory ({})", directory)) {
         let path = shader.expect(&format!("Invalid path in directory ({})", directory)).path();
         build_shader(&path).expect("Kernel failed to compile");
