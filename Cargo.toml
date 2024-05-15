@@ -13,7 +13,7 @@ crate-type = ["lib"]
 [features]
 building = ["dep:spirv-builder"]
 executor = ["dep:wgpu", "dep:futures"]
-runtime_building = ["building"]
+runtime_building = ["dep:spirv-builder"]
 # default = ["building", "executor"]
 
 

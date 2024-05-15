@@ -2,7 +2,7 @@
 pub mod building;
 
 #[cfg(feature = "runtime_building")]
-pub use building::runtime;
+pub mod runtime;
 
 #[cfg(feature = "executor")]
 pub mod gpu;

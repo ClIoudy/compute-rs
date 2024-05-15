@@ -1,7 +1,3 @@
-
-
-pub use super::build_shader;
-
 pub fn build_runtime<S: AsRef<std::path::Path> + ?Sized>(path: &S) -> Result<Vec<u8>, spirv_builder::SpirvBuilderError> {
 
     let file = spirv_builder::SpirvBuilder::new(path, super::COMPILE_TARGET)
@@ -15,7 +11,10 @@ pub fn build_runtime<S: AsRef<std::path::Path> + ?Sized>(path: &S) -> Result<Vec
 }
 
 pub fn build_runtime_multi<S: AsRef<std::path::Path> + ?Sized>(path: &S) -> Result<std::collections::HashMap<String, Vec<u8>>, spirv_builder::SpirvBuilderError> {
-    let file = build_shader(&path);
+    let file = spirv_builder::SpirvBuilder::new(path, super::COMPILE_TARGET)
+        .print_metadata(spirv_builder::MetadataPrintout::None)
+        .build();
+    
     if file.is_err() {
         return Err(file.err().unwrap());
     }
