@@ -1,1 +1,1 @@
-- shaderbuilder struct for add buffers etc then freeze bindgroup layout etc?
+- async functionality for possibly improved performance

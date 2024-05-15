@@ -3,26 +3,29 @@ pub struct BufferRaw {
     pub binding: u32,
     pub data: Vec<u8>,
     pub wgpu_buffer: Option<wgpu::Buffer>,
+    pub is_borrowed: bool,
 }
 
 impl BufferRaw {
-    pub fn new(binding: u32, data: &Vec<u8>, wgpu_buffer: wgpu::Buffer) -> Self {
+    pub(crate) fn new(binding: u32, data: &Vec<u8>, wgpu_buffer: wgpu::Buffer) -> Self {
         Self {
             binding,
             data: data.to_vec(),
             wgpu_buffer: Some(wgpu_buffer),
+            is_borrowed: false,
         }
     }
 
-    pub fn from<T>(binding: u32, data: &T) -> Self {
+    pub(crate) fn from<T>(binding: u32, data: &T) -> Self {
         Self {
             binding,
             data: any_as_u8(data).to_vec(),
-            wgpu_buffer: None
+            wgpu_buffer: None,
+            is_borrowed: false,
         }
     }
 
-    pub fn data<T>(&self) -> &[T] {
+    pub(crate) fn data<T>(&self) -> &[T] {
         u8_as_slice_of(&self.data)
     }
 

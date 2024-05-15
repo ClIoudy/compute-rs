@@ -1,33 +1,41 @@
 #![allow(warnings)]
-pub mod buffer;
+mod buffer;
 pub use buffer::*;
 use wgpu::{util::DeviceExt, BufferUsages};
 
-pub struct Shader<'a> {
+use std::time::Instant;
+
+pub struct Kernel<'a> {
     device: &'a wgpu::Device,
     queue: &'a wgpu::Queue,
     module: wgpu::ShaderModule,
     staging_buffers: Vec<BufferRaw>,
-    abc: Vec<&'a mut BufferRaw>,
+    buffers: Vec<&'a mut BufferRaw>,
+    bindgroup_layout: Option<wgpu::BindGroupLayout>,
+    compute_pipeline: Option<wgpu::ComputePipeline>,
+    entry_point: &'a str,
 }
 
-impl<'a> Shader<'a> {
-    pub fn new(device: &'a wgpu::Device, queue: &'a wgpu::Queue, module: wgpu::ShaderModule) -> Self {
+impl<'a> Kernel<'a> {
+    pub fn new(device: &'a wgpu::Device, queue: &'a wgpu::Queue, module: wgpu::ShaderModule, entry_point: &'a str) -> Self {
         Self {
             device,
             queue,
             module,
             staging_buffers: vec![],
-            abc: vec![],
+            buffers: vec![],
+            bindgroup_layout: None,
+            compute_pipeline: None,
+            entry_point
         }
     }
 
-    
-
-    pub fn dispatch(&mut self, x: u32, y: u32, z: u32, entry_point: &str) {        
-
+    pub fn dispatch(&mut self, x: u32, y: u32, z: u32) {        
+       
         let mut bindgroup_layout_entries = vec![];
         let mut bindgroup_entries = vec![];
+
+        
 
         for buffer in &self.staging_buffers {
 
@@ -53,36 +61,47 @@ impl<'a> Shader<'a> {
             bindgroup_layout_entries.push(bindgroup_layout_entry);
         }
 
-        let bindgroup_layout = self.device.create_bind_group_layout(
-            &wgpu::BindGroupLayoutDescriptor { 
-                label: None,
-                entries: &bindgroup_layout_entries
-            }
-        );
+        if self.bindgroup_layout.is_none() {
+            let bindgroup_layout = self.device.create_bind_group_layout(
+                &wgpu::BindGroupLayoutDescriptor { 
+                    label: None,
+                    entries: &bindgroup_layout_entries
+                }
+            );
+
+            self.bindgroup_layout = Some(bindgroup_layout);
+        }
 
         let bind_group = self.device.create_bind_group(
             &wgpu::BindGroupDescriptor { 
                 label: None, 
-                layout: &bindgroup_layout,
+                layout: self.bindgroup_layout.as_ref().unwrap(),
                 entries: bindgroup_entries.as_slice(),
             }
         );
 
-        let pipline_layout = self.device.create_pipeline_layout(
-            &wgpu::PipelineLayoutDescriptor { 
-                label: None, 
-                bind_group_layouts: &[&bindgroup_layout], 
-                push_constant_ranges: &[] }
-        );
 
-        let compute_pipeline = self.device.create_compute_pipeline(
-            &wgpu::ComputePipelineDescriptor { 
-                label: None,
-                layout: Some(&pipline_layout), 
-                module: &self.module, 
-                entry_point
-            }
-        );
+        if self.compute_pipeline.is_none() {
+            let pipline_layout = self.device.create_pipeline_layout(
+                &wgpu::PipelineLayoutDescriptor { 
+                    label: None, 
+                    bind_group_layouts: &[self.bindgroup_layout.as_ref().unwrap()], 
+                    push_constant_ranges: &[],
+                }
+            );
+
+            
+            let compute_pipeline = self.device.create_compute_pipeline(
+                &wgpu::ComputePipelineDescriptor { 
+                    label: None,
+                    layout: Some(&pipline_layout), 
+                    module: &self.module, 
+                    entry_point: self.entry_point,
+                }
+            );
+
+            self.compute_pipeline = Some(compute_pipeline);
+        }
         
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
         
@@ -93,7 +112,7 @@ impl<'a> Shader<'a> {
                     timestamp_writes: None 
                 }
             );
-            cpass.set_pipeline(&compute_pipeline);
+            cpass.set_pipeline(self.compute_pipeline.as_ref().unwrap());
             cpass.set_bind_group(0, &bind_group, &[]);
             cpass.dispatch_workgroups(x, y, z)
         }
@@ -136,21 +155,19 @@ impl<'a> Shader<'a> {
             self.device.poll(wgpu::Maintain::Wait);
 
             let data = buffer_slice.get_mapped_range().to_vec();
-            println!("{:?}", u8_as_slice_of::<u32>(&data));
-            self.abc[i].data = data;
+            self.buffers[i].data = data;
+            self.buffers[i].is_borrowed = false;
+        }
 
-        }   
+        self.buffers = vec![];
+        self.staging_buffers = vec![];
         
-        self.abc = vec![];
         
     }
 
-    pub fn add_buffer<T>(&mut self, buffer: &'a mut Buffer<T>) {
-        self.add_buffer_unowned(buffer);
-        self.abc.push(&mut buffer.buffer_raw);
-    }
-
-    pub fn add_buffer_unowned<T>(&mut self, buffer: &Buffer<T>) {
+    pub fn add_buffer<'b, T>(&mut self, buffer: &'b mut Buffer<T>) {
+        buffer.buffer_raw.is_borrowed = true;
+        
         let staging_buffer = self.device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: None,
@@ -161,5 +178,9 @@ impl<'a> Shader<'a> {
 
         let staging_buffer = BufferRaw::new(buffer.buffer_raw.binding, buffer.data_raw(), staging_buffer);
         self.staging_buffers.push(staging_buffer);
+        
+        let buffer = unsafe { &mut *(buffer as *mut Buffer<T>) };
+        self.buffers.push(&mut buffer.buffer_raw);
     }
 }
+
