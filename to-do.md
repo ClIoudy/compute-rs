@@ -1,1 +1,3 @@
+- add texture buffers
+- add feature for window building (for events: closures?)
 - async functionality for possibly improved performance

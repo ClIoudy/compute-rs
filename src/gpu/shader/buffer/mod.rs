@@ -1,59 +1,102 @@
-use std::{fmt::Debug, marker::PhantomData, mem::transmute, ptr};
-mod buffer_raw;
-pub use buffer_raw::*;
+use std::marker::PhantomData;
+use wgpu::util::{DeviceExt, BufferInitDescriptor};
 
-pub struct Buffer<T> {
-    pub(crate) buffer_raw: BufferRaw,
-    phantom_type: PhantomData<T>,
+pub struct Buffer<T: Clone> {
+    ty: PhantomData<T>,
+    data: &'static [u8],
+    binding: u32,
+    label: Option<&'static str>
 }
 
-impl<T> Buffer<T> {
-
-    // retrieves the raw (byte) buffer data
-    pub fn data_raw(&self) -> &Vec<u8> {
-        &self.buffer_raw.data
-    }
-
-    // creates a buffer with a binding from data of any type
-    pub fn from(binding: u32, data: &T) -> Self {
+impl<T: Clone> Buffer<T> {
+    pub fn new(data: &T, binding: u32) -> Self {
         Self {
-            buffer_raw: BufferRaw::from(binding, data),
-            phantom_type: PhantomData
+            ty: PhantomData,
+            data: any_as_u8(data),
+            binding,
+            label: None,
         }
     }
 
-    // creates a buffer with a binding from data of any type
-    pub fn data(&self) -> &[T] {
-        buffer_raw::u8_as_slice_of(&self.buffer_raw.data)
+    pub fn data(&self) -> T {
+        u8_as_any(self.data)
     }
 
-    // changes the buffers binding
-    pub fn set_binding(&mut self, binding: u32) {
-        self.buffer_raw.binding = binding;
+    pub fn raw_data(&self) -> &[u8] {
+        self.data
     }
 
-    // overwrites the buffer data
-    // this will not do anything if the buffer is already borrowed by a shader
-    pub fn set_data(&mut self, data: &T) {
-        if self.buffer_raw.is_borrowed {
-            return;
-        }
-        self.buffer_raw.data = any_as_u8(data).to_vec();
+    pub fn binding(&self) -> u32 {
+        self.binding
     }
 
-    // overwrites the buffer data
-    // this will not do anything if the buffer is already borrowed by a shader
-    pub fn set_data_raw(&mut self, data: Vec<u8>) {
-        if self.buffer_raw.is_borrowed {
-            return;
-        }
-        self.buffer_raw.data = data;
+    pub fn label(&mut self, label: &'static str) {
+        self.label = Some(label);
     }
-    
+
+    pub(crate) fn consume(&self) -> (BufferData, BufferId<T>) {
+        let d = BufferData::new(self.data.to_vec());
+
+        let id = BufferId::new(self.binding);
+
+        (d, id)
+
+    }
+
 }
 
-impl<T: Debug> std::fmt::Display for Buffer<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.data()[0])
+pub(crate) struct BufferData {
+    pub(crate) data: Vec<u8>,
+    pub(crate) label: Option<&'static str>,
+}
+
+impl BufferData {
+
+    pub fn new(data: Vec<u8>) -> Self {
+        Self {
+            data,
+            label: None,
+        }
+    }
+
+    #[inline]
+    pub fn staging(&self, gpu: &crate::gpu::Gpu) -> wgpu::Buffer {
+        let b = gpu.device.create_buffer_init(&BufferInitDescriptor {
+            label: self.label,
+            contents: &self.data,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+        });
+
+        b
+    }
+
+    // pub fn size(&self) -> usize {
+    //     self.data.len()
+    // }
+}
+
+pub struct BufferId<T: Clone> {
+    ty: PhantomData<T>,
+    pub(crate) binding: u32,
+}
+
+impl<T: Clone> BufferId<T> {
+    fn new(binding: u32) -> Self {
+        Self {
+            ty: PhantomData,
+            binding,            
+        }
+    }
+}
+
+fn any_as_u8<T>(data: &T) -> &'static [u8]{
+    unsafe {
+        std::slice::from_raw_parts((data as *const T) as *const u8, std::mem::size_of_val(data))
+    }
+}
+
+pub(crate) fn u8_as_any<T: Clone>(data: &[u8]) -> T {
+    unsafe {
+        data.align_to::<T>().1[0].clone()
     }
 }

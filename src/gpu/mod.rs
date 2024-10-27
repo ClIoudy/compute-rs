@@ -1,7 +1,10 @@
 pub use futures::executor::block_on;
+
 mod shader;
 pub use shader::*;
+
 pub use wgpu;
+
 
 pub struct Gpu {
     pub device: wgpu::Device,
@@ -38,16 +41,17 @@ impl Gpu {
 
     }
 
-    pub fn new_kernel(&self, shader_binary: &[u8], entry_point: &'static str) -> Kernel {
+    pub fn new_shader(&self, shader_binary: &[u8]) -> Shader {
 
         let module = self.device.create_shader_module(
-            wgpu::ShaderModuleDescriptor { 
+            wgpu::ShaderModuleDescriptor {
                 label: None, 
                 source: wgpu::ShaderSource::SpirV(wgpu::util::make_spirv_raw(&shader_binary)) 
             }
         );
+        
+        Shader::new(module)
 
-        Kernel::new(&self.device, &self.queue, module, entry_point)
     }
 
 }

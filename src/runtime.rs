@@ -19,9 +19,6 @@ pub fn build_runtime_multi<S: AsRef<std::path::Path> + ?Sized>(path: &S) -> Resu
         return Err(file.err().unwrap());
     }
     
-    // let mut res = vec![];
-
-    
     let mut result = std::collections::HashMap::with_capacity(10);
 
     for (name, file) in file.unwrap().module.unwrap_multi().iter() {
@@ -29,6 +26,4 @@ pub fn build_runtime_multi<S: AsRef<std::path::Path> + ?Sized>(path: &S) -> Resu
         result.insert(String::from(name), bytes);
     }
 
-    Ok(result)
-    // Ok(result)
 }

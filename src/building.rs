@@ -1,8 +1,5 @@
 const COMPILE_TARGET: &str = "spirv-unknown-vulkan1.1";
 
-#[cfg(feature = "runtime_building")]
-pub mod runtime;
-
 pub fn build_shader<S: AsRef<std::path::Path> + ?Sized>(path: &S) -> Result<spirv_builder::CompileResult, spirv_builder::SpirvBuilderError> {
     spirv_builder::SpirvBuilder::new(path.as_ref().to_owned(), COMPILE_TARGET)
     .build()

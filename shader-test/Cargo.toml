@@ -7,7 +7,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-compute-rs = { git = "https://github.com/ClIoudy/compute-rs", features = ["executor"]}
+compute-rs = { path = "../compute-rs", features = ["executor"] }
 
 [build-dependencies]
-compute-rs = { git = "https://github.com/ClIoudy/compute-rs", features = ["building"]}
+compute-rs = { path = "../compute-rs", features = ["building"] }
+            

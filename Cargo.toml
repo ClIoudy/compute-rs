@@ -14,12 +14,9 @@ crate-type = ["lib"]
 building = ["dep:spirv-builder"]
 executor = ["dep:wgpu", "dep:futures"]
 runtime_building = ["dep:spirv-builder"]
-# default = ["building", "executor"]
-
-
-
 
 [dependencies]
 spirv-builder = { version = "0.9", optional = true }
-wgpu = { version = "*", optional = true, features = ["spirv"]}
+# wgpu = { version = "0.19.1", optional = true, features = ["spirv"]}
+wgpu = { version = "*", optional = true, features = ["spirv"] }
 futures = { version = "0.3", optional = true, default-features = false, features = ["std", "executor"] }
