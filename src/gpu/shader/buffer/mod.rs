@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 use wgpu::util::{DeviceExt, BufferInitDescriptor};
 
+/// Buffer Struct for passing 
 pub struct Buffer<T: Clone> {
     ty: PhantomData<T>,
     data: &'static [u8],
@@ -18,11 +19,11 @@ impl<T: Clone> Buffer<T> {
         }
     }
 
-    pub fn data(&self) -> T {
+    pub(crate) fn data(&self) -> T {
         u8_as_any(self.data)
     }
 
-    pub fn raw_data(&self) -> &[u8] {
+    pub(crate) fn raw_data(&self) -> &[u8] {
         self.data
     }
 

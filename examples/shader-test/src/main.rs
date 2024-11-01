@@ -36,7 +36,7 @@ fn main() {
 
     shader.dispatch("k", 8, 1, 1, &gpu);
     shader_2.dispatch("k", 8, 1, 1, &gpu);
-    // println!("{:?}", shader.get(&array_buffer));
+    println!("{:?}", shader.get(&array_buffer));
     
 
 }

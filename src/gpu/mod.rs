@@ -7,8 +7,8 @@ pub use wgpu;
 
 
 pub struct Gpu {
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
+    pub(crate) device: wgpu::Device,
+    pub(crate) queue: wgpu::Queue,
 }
 
 impl Gpu {
